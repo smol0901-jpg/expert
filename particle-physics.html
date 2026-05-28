@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEURAL_ARCHITECT_PREMIUM++ 3D Particle Physics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: rgba(18, 18, 30, 0.7);
+  --border-glow: rgba(83, 52, 131, 0.5);
+  --accent-purple: #9b59b6;
+  --accent-blue: #3498db;
+  --accent-green: #2ecc71;
+  --accent-orange: #f39c12;
+  --accent-red: #e74c3c;
+  --accent-cyan: #00bcd4;
+  --text-primary: #e8e8f0;
+  --text-secondary: #a0a0c0;
+  --text-dim: #6a6a8a;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Inter', sans-serif;
+}
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow: hidden;
+}
+#canvas3d {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+.ui-overlay {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+}
+.ui-overlay > * {
+  pointer-events: auto;
+}
+.top-bar {
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.title-block h1 {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #a78bfa, #3498db, #00bcd4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.title-block .subtitle {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid;
+  background: rgba(18, 18, 30, 0.8);
+  backdrop-filter: blur(10px);
+}
+.btn:hover {
+  transform: translateY(-2px);
+}
+.btn-freeze { color: var(--accent-cyan); border-color: rgba(0, 188, 212, 0.5); }
+.btn-freeze:hover { background: rgba(0, 188, 212, 0.2); box-shadow: 0 8px 20px rgba(0, 188, 212, 0.3); }
+.btn-freeze.active { background: rgba(0, 188, 212, 0.3); box-shadow: 0 0 20px rgba(0, 188, 212, 0.5); }
+.btn-heat { color: var(--accent-orange); border-color: rgba(243, 156, 18, 0.5); }
+.btn-heat:hover { background: rgba(243, 156, 18, 0.2); box-shadow: 0 8px 20px rgba(243, 156, 18, 0.3); }
+.btn-heat.active { background: rgba(243, 156, 18, 0.3); box-shadow: 0 0 20px rgba(243, 156, 18, 0.5); }
+.btn-reset { color: var(--accent-red); border-color: rgba(231, 76, 60, 0.5); }
+.btn-reset:hover { background: rgba(231, 76, 60, 0.2); }
+.stats-panel {
+  bottom: 20px;
+  left: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  min-width: 280px;
+}
+.stats-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent-cyan);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(83, 52, 131, 0.1);
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-label {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+.stat-value.hot { color: var(--accent-orange); }
+.stat-value.cold { color: var(--accent-cyan); }
+.stat-value.frozen { color: var(--accent-blue); }
+.temp-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.temp-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+.info-panel {
+  bottom: 20px;
+  right: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  max-width: 300px;
+}
+.info-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent-purple);
+  margin-bottom: 12px;
+}
+.info-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.info-text code {
+  color: var(--accent-green);
+  background: rgba(46, 204, 113, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.legend {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.legend-dot.hot { background: var(--accent-orange); box-shadow: 0 0 8px var(--accent-orange); }
+.legend-dot.warm { background: var(--accent-green); }
+.legend-dot.cold { background: var(--accent-cyan); }
+.legend-dot.frozen { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+.settings-panel {
+  top: 100px;
+  right: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  width: 260px;
+}
+.settings-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent-purple);
+  margin-bottom: 16px;
+}
+.setting-row {
+  margin-bottom: 16px;
+}
+.setting-row label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.setting-row input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  background: rgba(83, 52, 131, 0.3);
+  border-radius: 2px;
+  outline: none;
+}
+.setting-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent-purple);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.setting-row .value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  float: right;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas3d"></canvas>
+
+<div class="ui-overlay top-bar">
+  <div class="title-block">
+    <h1>🧊 3D Particle Physics</h1>
+    <div class="subtitle">NEURAL_ARCHITECT_PREMIUM++ v8.4 | Cube 10×10×10</div>
+  </div>
+  <div class="controls">
+    <button class="btn btn-freeze" id="freezeBtn" onclick="toggleFreeze()">❄️ Заморозка</button>
+    <button class="btn btn-heat" id="heatBtn" onclick="toggleHeat()">🔥 Нагрев</button>
+    <button class="btn btn-reset" onclick="resetParticles()">🔄 Сброс</button>
+  </div>
+</div>
+
+<div class="ui-overlay stats-panel">
+  <div class="stats-title">📊 Статистика системы</div>
+  <div class="stat-row">
+    <span class="stat-label">Частиц</span>
+    <span class="stat-value" id="particleCount">0</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">Столкновений/сек</span>
+    <span class="stat-value" id="collisionCount">0</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">Средняя скорость</span>
+    <span class="stat-value" id="avgSpeed">0</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">Горячих частиц</span>
+    <span class="stat-value hot" id="hotCount">0</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">Замороженных</span>
+    <span class="stat-value frozen" id="frozenCount">0</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">Общая температура</span>
+    <span class="stat-value" id="totalTemp">0</span>
+  </div>
+  <div class="temp-bar">
+    <div class="temp-bar-fill" id="tempBar" style="width: 50%; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-orange));"></div>
+  </div>
+</div>
+
+<div class="ui-overlay settings-panel">
+  <div class="settings-title">⚙️ Параметры симуляции</div>
+  <div class="setting-row">
+    <label>Количество частиц <span class="value" id="particleCountVal">50</span></label>
+    <input type="range" id="particleSlider" min="10" max="200" value="50" onchange="updateParticleCount()">
+  </div>
+  <div class="setting-row">
+    <label>Сила трения <span class="value" id="frictionVal">0.02</span></label>
+    <input type="range" id="frictionSlider" min="0" max="10" value="2" onchange="updateFriction()">
+  </div>
+  <div class="setting-row">
+    <label>Скорость нагрева <span class="value" id="heatRateVal">0.5</span></label>
+    <input type="range" id="heatRateSlider" min="1" max="20" value="5" onchange="updateHeatRate()">
+  </div>
+  <div class="setting-row">
+    <label>Скорость охлаждения <span class="value" id="coolRateVal">0.3</span></label>
+    <input type="range" id="coolRateSlider" min="1" max="20" value="3" onchange="updateCoolRate()">
+  </div>
+  <div class="setting-row">
+    <label>Порог заморозки <span class="value" id="freezeThresholdVal">0.2</span></label>
+    <input type="range" id="freezeThresholdSlider" min="1" max="30" value="2" onchange="updateFreezeThreshold()">
+  </div>
+</div>
+
+<div class="ui-overlay info-panel">
+  <div class="info-title">ℹ️ Как это работает</div>
+  <div class="info-text">
+    <strong>3D куб 10×10×10 полей</strong><br><br>
+    Каждая частица имеет:<br>
+    • <code>позицию</code> (x, y, z)<br>
+    • <code>скорость</code> (vx, vy, vz)<br>
+    • <code>температуру</code> (0-1)<br>
+    • <code>радиус</code><br><br>
+    <strong>Физика:</strong><br>
+    • Упругие столкновения<br>
+    • Трение при контакте<br>
+    • Нагрев от движения<br>
+    • Охлаждение (заморозка)<br>
+    • Границы куба
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot hot"></div>Горячая</div>
+    <div class="legend-item"><div class="legend-dot warm"></div>Тёплая</div>
+    <div class="legend-item"><div class="legend-dot cold"></div>Холодная</div>
+    <div class="legend-item"><div class="legend-dot frozen"></div>Заморожена</div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// 3D PARTICLE PHYSICS ENGINE
+// Cube: 10×10×10 fields
+// ============================================
+
+const canvas = document.getElementById('canvas3d');
+const ctx = canvas.getContext('2d');
+
+// Configuration
+const CONFIG = {
+  cubeSize: 10,           // 10 fields in each dimension
+  fieldSize: 40,         // pixels per field
+  particleCount: 50,
+  friction: 0.02,        // friction coefficient
+  heatRate: 0.5,         // heating from movement
+  coolRate: 0.3,         // cooling rate
+  freezeThreshold: 0.2, // temp below which particle freezes
+  collisionDamping: 0.8, // energy loss on collision
+  minSpeed: 0.01,        // minimum speed threshold
+  maxSpeed: 2,           // maximum speed
+  particleRadius: 0.3,   // field units
+  freezeActive: false,
+  heatActive: false
+};
+
+// Camera (isometric-ish view)
+const camera = {
+  angleX: 0.5,
+  angleY: 0.8,
+  zoom: 1,
+  offsetX: 0,
+  offsetY: 0
+};
+
+// Particles array
+let particles = [];
+let collisionCount = 0;
+let lastCollisionReset = Date.now();
+
+// Resize canvas
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  camera.offsetX = canvas.width / 2;
+  camera.offsetY = canvas.height / 2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ============================================
+// PARTICLE CLASS
+// ============================================
+class Particle {
+  constructor(x, y, z) {
+    // Position in field units (0-10)
+    this.x = x !== undefined ? x : Math.random() * CONFIG.cubeSize;
+    this.y = y !== undefined ? y : Math.random() * CONFIG.cubeSize;
+    this.z = z !== undefined ? z : Math.random() * CONFIG.cubeSize;
+    
+    // Velocity (3D vector)
+    this.vx = (Math.random() - 0.5) * 0.5;
+    this.vy = (Math.random() - 0.5) * 0.5;
+    this.vz = (Math.random() - 0.5) * 0.5;
+    
+    // Temperature (0-1, where 1 is hottest)
+    this.temperature = 0.5 + Math.random() * 0.3;
+    
+    // Physical properties
+    this.radius = CONFIG.particleRadius * (0.8 + Math.random() * 0.4);
+    this.mass = this.radius * this.radius * this.radius; // mass proportional to volume
+    this.frozen = false;
+    this.frozenTime = 0;
+  }
+  
+  // Get speed (magnitude of velocity vector)
+  get speed() {
+    return Math.sqrt(this.vx * this.vx + this.vy * this.vy + this.vz * this.vz);
+  }
+  
+  // Get temperature color
+  getColor() {
+    if (this.frozen) {
+      return `rgba(52, 152, 219, ${0.7 + this.temperature * 0.3})`;
+    }
+    
+    // Temperature gradient: blue -> cyan -> green -> orange -> red
+    const t = this.temperature;
+    if (t < 0.25) {
+      return `rgba(0, ${Math.floor(188 * (t * 4))}, ${Math.floor(212 - 50 * (t * 4))}, 0.9)`;
+    } else if (t < 0.5) {
+      return `rgba(0, ${Math.floor(200 + 55 * ((t - 0.25) * 4))}, ${Math.floor(162 - 100 * ((t - 0.25) * 4))}, 0.9)`;
+    } else if (t < 0.75) {
+      return `rgba(${Math.floor(46 + 200 * ((t - 0.5) * 4))}, ${Math.floor(204 - 50 * ((t - 0.5) * 4))}, ${Math.floor(113 - 95 * ((t - 0.5) * 4))}, 0.9)`;
+    } else {
+      return `rgba(${Math.floor(200 + 55 * ((t - 0.75) * 4))}, ${Math.floor(156 - 80 * ((t - 0.75) * 4))}, ${Math.floor(18 + 18 * ((t - 0.75) * 4))}, 0.9)`;
+    }
+  }
+  
+  // Get glow color
+  getGlow() {
+    if (this.frozen) return 'rgba(52, 152, 219, 0.5)';
+    if (this.temperature > 0.7) return 'rgba(243, 156, 18, 0.6)';
+    if (this.temperature > 0.4) return 'rgba(46, 204, 113, 0.4)';
+    return 'rgba(0, 188, 212, 0.3)';
+  }
+}
+
+// ============================================
+// 3D PROJECTION
+// ============================================
+function project(x, y, z) {
+  // Rotate around Y axis
+  const cosY = Math.cos(camera.angleY);
+  const sinY = Math.sin(camera.angleY);
+  const rx = x * cosY - z * sinY;
+  const rz = x * sinY + z * cosY;
+  
+  // Rotate around X axis
+  const cosX = Math.cos(camera.angleX);
+  const sinX = Math.sin(camera.angleX);
+  const ry = y * cosX - rz * sinX;
+  const rz2 = y * sinX + rz * cosX;
+  
+  // Project to 2D
+  const scale = CONFIG.fieldSize * camera.zoom;
+  const px = rx * scale + camera.offsetX;
+  const py = ry * scale + camera.offsetY;
+  
+  // Depth for sorting (farther = smaller, darker)
+  const depth = rz2;
+  
+  return { x: px, y: py, depth: depth, scale: scale };
+}
+
+// ============================================
+// PHYSICS ENGINE
+// ============================================
+function updatePhysics() {
+  const dt = 1; // time step
+  
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    
+    // Skip frozen particles (they don't move)
+    if (p.frozen) continue;
+    
+    // Apply velocity
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.z += p.vz * dt;
+    
+    // Boundary collisions (cube walls)
+    for (let axis of ['x', 'y', 'z']) {
+      if (p[axis] < p.radius) {
+        p[axis] = p.radius;
+        p['v' + axis] *= -CONFIG.collisionDamping;
+        // Bounce adds some heat
+        p.temperature = Math.min(1, p.temperature + 0.05);
+      }
+      if (p[axis] > CONFIG.cubeSize - p.radius) {
+        p[axis] = CONFIG.cubeSize - p.radius;
+        p['v' + axis] *= -CONFIG.collisionDamping;
+        p.temperature = Math.min(1, p.temperature + 0.05);
+      }
+    }
+    
+    // Apply friction
+    p.vx *= (1 - CONFIG.friction);
+    p.vy *= (1 - CONFIG.friction);
+    p.vz *= (1 - CONFIG.friction);
+    
+    // Heating from movement
+    const speed = p.speed;
+    if (speed > CONFIG.minSpeed) {
+      p.temperature = Math.min(1, p.temperature + speed * CONFIG.heatRate * 0.01);
+    }
+    
+    // Cooling / Freeze mode
+    if (CONFIG.freezeActive) {
+      p.temperature = Math.max(0, p.temperature - CONFIG.coolRate * 0.02);
+    }
+    
+    // Heat mode
+    if (CONFIG.heatActive) {
+      p.temperature = Math.min(1, p.temperature + CONFIG.heatRate * 0.03);
+    }
+    
+    // Natural cooling (entropy)
+    p.temperature = Math.max(0, p.temperature - 0.001);
+    
+    // Check freeze threshold
+    if (p.temperature < CONFIG.freezeThreshold && speed < 0.1) {
+      p.frozen = true;
+      p.frozenTime++;
+    }
+    
+    // Unfreeze if heated enough
+    if (p.frozen && p.temperature > CONFIG.freezeThreshold + 0.2) {
+      p.frozen = false;
+      p.frozenTime = 0;
+    }
+    
+    // Clamp speed
+    if (p.speed > CONFIG.maxSpeed) {
+      const scale = CONFIG.maxSpeed / p.speed;
+      p.vx *= scale;
+      p.vy *= scale;
+      p.vz *= scale;
+    }
+  }
+  
+  // Particle-particle collisions
+  handleCollisions();
+}
+
+
+// ============================================
+// COLLISION DETECTION & RESPONSE
+// ============================================
+function handleCollisions() {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const p1 = particles[i];
+      const p2 = particles[j];
+      
+      // Skip if both frozen
+      if (p1.frozen && p2.frozen) continue;
+      
+      // Calculate distance
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const dz = p2.z - p1.z;
+      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const minDist = p1.radius + p2.radius;
+      
+      // Collision detected
+      if (dist < minDist && dist > 0.001) {
+        collisionCount++;
+        
+        // Normal vector
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const nz = dz / dist;
+        
+        // Relative velocity
+        const dvx = p1.vx - p2.vx;
+        const dvy = p1.vy - p2.vy;
+        const dvz = p1.vz - p2.vz;
+        
+        // Relative velocity along normal
+        const dvn = dvx * nx + dvy * ny + dvz * nz;
+        
+        // Don't resolve if moving apart
+        if (dvn > 0) continue;
+        
+        // Collision response (elastic collision)
+        const restitution = CONFIG.collisionDamping;
+        const totalMass = p1.mass + p2.mass;
+        
+        const impulse = -(1 + restitution) * dvn / totalMass;
+        
+        // Apply impulse (only to non-frozen particles)
+        if (!p1.frozen) {
+          p1.vx += impulse * p2.mass * nx;
+          p1.vy += impulse * p2.mass * ny;
+          p1.vz += impulse * p2.mass * nz;
+        }
+        if (!p2.frozen) {
+          p2.vx -= impulse * p1.mass * nx;
+          p2.vy -= impulse * p1.mass * ny;
+          p2.vz -= impulse * p1.mass * nz;
+        }
+        
+        // Separate particles (prevent overlap)
+        const overlap = minDist - dist;
+        const separationX = nx * overlap * 0.5;
+        const separationY = ny * overlap * 0.5;
+        const separationZ = nz * overlap * 0.5;
+        
+        if (!p1.frozen) {
+          p1.x -= separationX;
+          p1.y -= separationY;
+          p1.z -= separationZ;
+        }
+        if (!p2.frozen) {
+          p2.x += separationX;
+          p2.y += separationY;
+          p2.z += separationZ;
+        }
+        
+        // Heat from collision
+        const collisionHeat = Math.abs(dvn) * 0.1;
+        p1.temperature = Math.min(1, p1.temperature + collisionHeat);
+        p2.temperature = Math.min(1, p2.temperature + collisionHeat);
+        
+        // Friction between particles (tangential force)
+        const frictionImpulse = CONFIG.friction * Math.abs(dvn) * 0.5;
+        const tx = dvx - dvn * nx;
+        const ty = dvy - dvn * ny;
+        const tz = dvz - dvn * nz;
+        const tLen = Math.sqrt(tx * tx + ty * ty + tz * tz);
+        
+        if (tLen > 0.001 && !p1.frozen) {
+          p1.vx -= (tx / tLen) * frictionImpulse * p2.mass / totalMass;
+          p1.vy -= (ty / tLen) * frictionImpulse * p2.mass / totalMass;
+          p1.vz -= (tz / tLen) * frictionImpulse * p2.mass / totalMass;
+        }
+        if (tLen > 0.001 && !p2.frozen) {
+          p2.vx += (tx / tLen) * frictionImpulse * p1.mass / totalMass;
+          p2.vy += (ty / tLen) * frictionImpulse * p1.mass / totalMass;
+          p2.vz += (tz / tLen) * frictionImpulse * p1.mass / totalMass;
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// RENDERING
+// ============================================
+function render() {
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw cube wireframe
+  drawCube();
+  
+  // Sort particles by depth (far to near)
+  const projected = particles.map(p => {
+    const proj = project(p.x, p.y, p.z);
+    return { particle: p, ...proj };
+  });
+  projected.sort((a, b) => b.depth - a.depth);
+  
+  // Draw particles
+  for (const p of projected) {
+    const particle = p.particle;
+    const radius = particle.radius * p.scale * (1 - p.depth / 30);
+    
+    // Glow
+    const gradient = ctx.createRadialGradient(
+      p.x, p.y, 0,
+      p.x, p.y, radius * 2
+    );
+    gradient.addColorStop(0, particle.getGlow());
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius * 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Main particle
+    ctx.fillStyle = particle.getColor();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Frozen indicator
+    if (particle.frozen) {
+      ctx.strokeStyle = 'rgba(52, 152, 219, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  
+  // Update stats
+  updateStats();
+}
+
+function drawCube() {
+  const s = CONFIG.cubeSize;
+  const corners = [
+    [0, 0, 0], [s, 0, 0], [s, s, 0], [0, s, 0],
+    [0, 0, s], [s, 0, s], [s, s, s], [0, s, s]
+  ];
+  
+  const projected = corners.map(c => project(c[0], c[1], c[2]));
+  
+  // Draw edges
+  ctx.strokeStyle = 'rgba(83, 52, 131, 0.3)';
+  ctx.lineWidth = 1;
+  
+  const edges = [
+    [0, 1], [1, 2], [2, 3], [3, 0], // back face
+    [4, 5], [5, 6], [6, 7], [7, 4], // front face
+    [0, 4], [1, 5], [2, 6], [3, 7]  // connecting
+  ];
+  
+  for (const [i, j] of edges) {
+    ctx.beginPath();
+    ctx.moveTo(projected[i].x, projected[i].y);
+    ctx.lineTo(projected[j].x, projected[j].y);
+    ctx.stroke();
+  }
+  
+  // Draw grid lines on faces
+  ctx.strokeStyle = 'rgba(83, 52, 131, 0.1)';
+  for (let i = 1; i < s; i++) {
+    // XY plane (front)
+    const p1 = project(i, 0, s);
+    const p2 = project(i, s, s);
+    const p3 = project(0, i, s);
+    const p4 = project(s, i, s);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.moveTo(p3.x, p3.y);
+    ctx.lineTo(p4.x, p4.y);
+    ctx.stroke();
+  }
+}
+
+// ============================================
+// STATISTICS
+// ============================================
+function updateStats() {
+  document.getElementById('particleCount').textContent = particles.length;
+  
+  // Collision rate
+  const now = Date.now();
+  if (now - lastCollisionReset > 1000) {
+    document.getElementById('collisionCount').textContent = collisionCount;
+    collisionCount = 0;
+    lastCollisionReset = now;
+  }
+  
+  // Average speed
+  let totalSpeed = 0;
+  let hotCount = 0;
+  let frozenCount = 0;
+  let totalTemp = 0;
+  
+  for (const p of particles) {
+    totalSpeed += p.speed;
+    totalTemp += p.temperature;
+    if (p.temperature > 0.7) hotCount++;
+    if (p.frozen) frozenCount++;
+  }
+  
+  const avgSpeed = particles.length > 0 ? totalSpeed / particles.length : 0;
+  const avgTemp = particles.length > 0 ? totalTemp / particles.length : 0;
+  
+  document.getElementById('avgSpeed').textContent = avgSpeed.toFixed(3);
+  document.getElementById('hotCount').textContent = hotCount;
+  document.getElementById('frozenCount').textContent = frozenCount;
+  document.getElementById('totalTemp').textContent = (avgTemp * 100).toFixed(0) + '%';
+  
+  // Temperature bar
+  const tempBar = document.getElementById('tempBar');
+  tempBar.style.width = (avgTemp * 100) + '%';
+  if (avgTemp > 0.6) {
+    tempBar.style.background = 'linear-gradient(90deg, var(--accent-orange), var(--accent-red))';
+  } else if (avgTemp > 0.4) {
+    tempBar.style.background = 'linear-gradient(90deg, var(--accent-green), var(--accent-orange))';
+  } else {
+    tempBar.style.background = 'linear-gradient(90deg, var(--accent-cyan), var(--accent-blue))';
+  }
+}
+
+// ============================================
+// CONTROLS
+// ============================================
+function toggleFreeze() {
+  CONFIG.freezeActive = !CONFIG.freezeActive;
+  document.getElementById('freezeBtn').classList.toggle('active', CONFIG.freezeActive);
+}
+
+function toggleHeat() {
+  CONFIG.heatActive = !CONFIG.heatActive;
+  document.getElementById('heatBtn').classList.toggle('active', CONFIG.heatActive);
+}
+
+function resetParticles() {
+  particles = [];
+  for (let i = 0; i < CONFIG.particleCount; i++) {
+    particles.push(new Particle());
+  }
+}
+
+function updateParticleCount() {
+  const val = parseInt(document.getElementById('particleSlider').value);
+  CONFIG.particleCount = val;
+  document.getElementById('particleCountVal').textContent = val;
+  
+  // Adjust particles array
+  while (particles.length < val) {
+    particles.push(new Particle());
+  }
+  while (particles.length > val) {
+    particles.pop();
+  }
+}
+
+function updateFriction() {
+  const val = parseInt(document.getElementById('frictionSlider').value);
+  CONFIG.friction = val / 100;
+  document.getElementById('frictionVal').textContent = CONFIG.friction.toFixed(2);
+}
+
+function updateHeatRate() {
+  const val = parseInt(document.getElementById('heatRateSlider').value);
+  CONFIG.heatRate = val / 10;
+  document.getElementById('heatRateVal').textContent = CONFIG.heatRate.toFixed(1);
+}
+
+function updateCoolRate() {
+  const val = parseInt(document.getElementById('coolRateSlider').value);
+  CONFIG.coolRate = val / 10;
+  document.getElementById('coolRateVal').textContent = CONFIG.coolRate.toFixed(1);
+}
+
+function updateFreezeThreshold() {
+  const val = parseInt(document.getElementById('freezeThresholdSlider').value);
+  CONFIG.freezeThreshold = val / 100;
+  document.getElementById('freezeThresholdVal').textContent = CONFIG.freezeThreshold.toFixed(2);
+}
+
+// Mouse rotation
+let isDragging = false;
+let lastMouse = { x: 0, y: 0 };
+
+canvas.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - lastMouse.x;
+  const dy = e.clientY - lastMouse.y;
+  camera.angleY += dx * 0.01;
+  camera.angleX += dy * 0.01;
+  lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+canvas.addEventListener('mouseup', () => isDragging = false);
+canvas.addEventListener('mouseleave', () => isDragging = false);
+
+
+// Mouse wheel zoom
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  camera.zoom *= e.deltaY > 0 ? 0.9 : 1.1;
+  camera.zoom = Math.max(0.5, Math.min(3, camera.zoom));
+});
+
+// ============================================
+// MAIN LOOP
+// ============================================
+function gameLoop() {
+  updatePhysics();
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// Initialize
+resetParticles();
+gameLoop();
+</script>
+</body>
+</html>
